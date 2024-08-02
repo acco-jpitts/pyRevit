@@ -8,9 +8,7 @@ import re
 from typing import List, Optional, Dict
 import subprocess
 
-
 logger = logging.getLogger()
-
 
 class Command:
     """CLI command type"""
@@ -28,15 +26,14 @@ class Command:
     def __repr__(self):
         return f"[{self.name} {self.target}]"
 
-
 def system(
     args: List[str],
     cwd: Optional[str] = None,
     dump_stdout: Optional[bool] = False,
 ):
+    """Run a command and return the stdout"""
     print(f"> {' '.join(args)}")
 
-    """Run a command and return the stdout"""
     if dump_stdout:
         res = subprocess.run(
             args, stderr=subprocess.STDOUT, check=False, cwd=cwd
@@ -45,7 +42,6 @@ def system(
     else:
         res = subprocess.run(args, capture_output=True, check=False, cwd=cwd)
         return res.stdout.decode().strip(), res.returncode
-
 
 def where(program_name):
     """Test if a program is available on PATH"""
@@ -59,7 +55,6 @@ def where(program_name):
     )
     return res.stdout != b""
 
-
 def format_help(helpstring):
     """Format command help for cli help"""
     formatted_help = helpstring
@@ -72,16 +67,17 @@ def format_help(helpstring):
                 formatted_help += f"\n{'':44}{hline}"
     return formatted_help
 
-
 def run_command(commands: List[Command], args: Dict[str, str]):
     """Process cli args and run the appropriate commands"""
     for cmd in [x for x in commands if args[x.name]]:
-        if cmd.target:
-            if not args[cmd.target]:
-                continue
+        if cmd.target and not args[cmd.target]:
+            continue
         logger.debug("Running %s", cmd)
-        cmd.run(args)
-
+        try:
+            cmd.run(args)
+        except Exception as e:
+            logger.error("Error running command %s: %s", cmd, e)
+            sys.exit(1)
 
 def parse_dotnet_build_output(output):
     """Parse dotnet build output to find the result and error reports"""
@@ -89,6 +85,7 @@ def parse_dotnet_build_output(output):
     time_finder = re.compile(r"^Time Elapsed (.+)$")
     capture = False
     report = ""
+    result = True
     for oline in output[0].split("\n"):
         if time_finder.match(oline):
             break
@@ -98,8 +95,7 @@ def parse_dotnet_build_output(output):
             if "fail" in match.groups()[0].lower():
                 result = False
                 capture = True
-    return output[1] == 0, output[0]
-
+    return result, report
 
 def ensure_windows():
     """Ensure utility is running on Windows"""
@@ -107,14 +103,12 @@ def ensure_windows():
         print("This command can only execute on Windows")
         sys.exit(1)
 
-
 TERMINAL_CODES = {
     "b": 1,
     "f": 2,
     "red": 91,
     "grn": 92,
 }
-
 
 def colorize(input_string):
     """Replace <x> tags with terminal color codes

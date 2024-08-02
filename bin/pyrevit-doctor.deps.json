@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "pyrevit-doctor/5.0.0.24174+2300": {
+        "runtime": {
+          "pyrevit-doctor.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "pyrevit-doctor/5.0.0.24174+2300": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

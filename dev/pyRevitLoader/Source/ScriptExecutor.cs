@@ -4,13 +4,20 @@ using System.Text;
 using System.IO;
 using IronPython.Runtime.Exceptions;
 using IronPython.Compiler;
-using Microsoft.Scripting;
-using Microsoft.Scripting.Hosting;
+//using pyRevitLabs.Microsoft.Scripting;
+//using pyRevitLabs.Microsoft.Scripting.Hosting;
 using Autodesk.Revit.UI;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Windows.Forms;
 using IronPython.Runtime.Operations;
+using Microsoft.Scripting;
+using Microsoft.Scripting.Hosting;
+//using Microsoft.Scripting;
+//using Microsoft.Scripting.Hosting;
+using pyRevitLabs.Microsoft.Scripting;
+using pyRevitLabs.Microsoft.Scripting.Hosting;
+using ScriptEngine = pyRevitLabs.Microsoft.Scripting.Hosting.ScriptEngine;
 
 namespace PyRevitLoader {
     // Executes a script
@@ -36,8 +43,8 @@ namespace PyRevitLoader {
 
         public static string EngineVersion {
             get {
-                var assmVersion = Assembly.GetAssembly(typeof(ScriptExecutor)).GetName().Version;
-                return string.Format("{0}{1}{2}", assmVersion.Major, assmVersion.Minor, assmVersion.Build);
+                var assmVersion = Assembly.GetAssembly(typeof(ScriptExecutor))?.GetName().Version;
+                return string.Format("{0}{1}{2}", assmVersion!.Major, assmVersion.Minor, assmVersion.Build);
             }
         }
 
@@ -70,7 +77,7 @@ namespace PyRevitLoader {
                 var script = engine.CreateScriptSourceFromFile(sourcePath, Encoding.UTF8, SourceCodeKind.Statements);
 
                 // setting module to be the main module so __name__ == __main__ is True
-                var compiler_options = (PythonCompilerOptions)engine.GetCompilerOptions(scope);
+                PythonCompilerOptions compiler_options = (PythonCompilerOptions)engine.GetCompilerOptions(scope);
                 compiler_options.ModuleName = "__main__";
                 compiler_options.Module |= IronPython.Runtime.ModuleOptions.Initialize;
 
@@ -98,7 +105,7 @@ namespace PyRevitLoader {
                 }
                 catch (Exception exception) {
                     string _dotnet_err_message = exception.ToString();
-                    string _ipy_err_messages = engine.GetService<ExceptionOperations>().FormatException(exception);
+                    string _ipy_err_messages = engine.GetService<Microsoft.Scripting.Hosting.ExceptionOperations>().FormatException(exception);
 
                     _ipy_err_messages =
                         string.Join("\n", "IronPython Traceback:", _ipy_err_messages.Replace("\r\n", "\n"));
@@ -160,7 +167,7 @@ namespace PyRevitLoader {
         }
 
         // Set up an IronPython environment
-        public ScriptScope SetupEnvironment(ScriptEngine engine) {
+        public Microsoft.Scripting.Hosting.ScriptScope SetupEnvironment(ScriptEngine engine) {
             var scope = IronPython.Hosting.Python.CreateModule(engine, "__main__");
 
             SetupEnvironment(engine, scope);
@@ -168,7 +175,7 @@ namespace PyRevitLoader {
             return scope;
         }
 
-        public void SetupEnvironment(ScriptEngine engine, ScriptScope scope) {
+        public void SetupEnvironment(ScriptEngine engine, Microsoft.Scripting.Hosting.ScriptScope scope) {
             // add two special variables: __revit__ and __vars__ to be globally visible everywhere:            
             var builtin = IronPython.Hosting.Python.GetBuiltinModule(engine);
             builtin.SetVariable("__revit__", _revit);
@@ -187,6 +194,7 @@ namespace PyRevitLoader {
 
     public class ErrorReporter : ErrorListener {
         public List<String> Errors = new List<string>();
+        private ErrorListener _errorListenerImplementation;
 
         public override void ErrorReported(ScriptSource source, string message, SourceSpan span, int errorCode, Severity severity) {
             Errors.Add(string.Format("{0} (line {1})", message, span.Start.Line));

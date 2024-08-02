@@ -41,8 +41,6 @@
     CERTIFICATEPASSWORD     certificate password
 
 """  # pylint: disable=line-too-long
-# - [ ] run tests?
-# - [ ] optional arguments
 
 # pylint: disable=invalid-name,broad-except
 import logging
@@ -54,12 +52,11 @@ from typing import Dict
 from docopt import docopt
 
 # dev scripts
-from scripts import utils
+from scripts import utils, configs
 from scripts.utils import Command
 
 # functions
 import _install as install
-# import _apidocspy as apidocspy # not used by new documentation workflow
 import _autocomplete as autoc
 import _labs as labs
 import _build as build
@@ -70,18 +67,21 @@ import _props as props
 import _telem as telem
 import _misc as misc
 
-
-# cli info
 __binname__ = op.splitext(op.basename(__file__))[0]
-
-
 logging.basicConfig()
 logger = logging.getLogger()
 
+def _abort(message):
+    """Abort the build process with a message"""
+    print("Build failed")
+    print(message)
+    sys.exit(1)
 
 def prepare_docopt_help(for_print=False):
     """Prepare docstring for docopt"""
-    command_templates = ""
+    command_templates = "\n    ".join(
+        [f"{__binname__} {x.template}" for x in COMMANDS]
+    )
     if for_print:
         command_templates = "\n    ".join(
             [
@@ -89,26 +89,20 @@ def prepare_docopt_help(for_print=False):
                 for x in COMMANDS
             ]
         )
-    else:
-        command_templates = "\n    ".join(
-            [f"{__binname__} {x.template}" for x in COMMANDS]
-        )
 
     return utils.colorize(__doc__.format(command_templates=command_templates))
-
 
 def print_help(_: Dict[str, str]):
     """Print this help"""
     print(prepare_docopt_help(for_print=True))
     sys.exit()
 
-
 COMMANDS = [
     # release
     Command(name="release", target="", args=["<tag>"], run=release.create_release),
     # notify issue threads
     Command(name="notify", target="", args=["<build>", "<url>", "[<tag>]"], run=clog.notify_issues),
-    # signning builds
+    # signing builds
     Command(name="sign", target="addcert", args=[], run=release.setup_certificate),
     Command(name="sign", target="products", args=[], run=release.sign_binaries),
     Command(name="sign", target="installers", args=[], run=release.sign_installers),
@@ -143,7 +137,6 @@ COMMANDS = [
     Command(name="check", target="", args=[], run=install.check),
 ]
 
-
 if __name__ == "__main__":
     if "--debug" in sys.argv:
         logger.setLevel(logging.DEBUG)
@@ -153,12 +146,11 @@ if __name__ == "__main__":
         # process args
         args = docopt(
             doc=prepare_docopt_help(),
-            version="{} {}".format(__binname__, props.get_version()),
+            version=f"{__binname__} {props.get_version()}",
             help=False,
         )
         # run the appropriate command
         utils.run_command(COMMANDS, args)
-    # gracefully handle exceptions and print results
     except Exception as run_ex:
         logger.error("%s", str(run_ex))
         sys.exit(1)
